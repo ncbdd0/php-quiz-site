@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#f5efe2">
+  <title>PHP程序设计 · 学生自主答题</title>
+  <meta name="description" content="PHP 程序设计作业题库自主练习：背题背诵 / 答题模式 / 错题本 / 知识库">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
+</head>
+<body data-view="home">
+
+  <noscript>
+    <div class="noscript-tip">本页面需要启用 JavaScript 才能作答。</div>
+  </noscript>
+
+  <main class="wrap">
+
+    <!-- ================= 进站锁屏 ================= -->
+    <section id="view-lock" hidden>
+      <div class="lock-card sheet">
+        <div class="lock-glyph" aria-hidden="true">🔒</div>
+        <h1 class="lock-title">学生自主答题</h1>
+        <p class="lock-sub">本站为个人自用题库，请输入进站密码</p>
+        <div class="lock-row">
+          <input type="password" id="lock-pw" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="进站密码" aria-label="进站密码">
+          <button type="button" class="btn primary" id="btn-unlock">进入</button>
+        </div>
+        <p class="lock-msg" id="lock-msg"></p>
+        <p class="lock-hint" id="lock-hint">连续输错 5 次将临时锁定，防止暴力破解</p>
+      </div>
+    </section>
+
+    <!-- ================= 首页 ================= -->
+    <section id="view-home">
+
+      <header class="exam-head reveal d1">
+        <p class="exam-kicker">PHP 程序设计 · 课程作业题库</p>
+        <h1 class="exam-title">学生自主答题</h1>
+        <p class="exam-sub" id="home-stats">共 322 题 · 单选 170 / 多选 32 / 填空 120</p>
+        <p class="exam-note">判分一律以《PHP作业题库答案与解析》中的【答案】为准，解析仅供参考</p>
+      </header>
+
+      <div class="mode-grid">
+        <button type="button" class="mode-card reveal d2" data-mode="recite" aria-pressed="false">
+          <span class="mode-glyph" aria-hidden="true">背</span>
+          <span class="mode-name">背题模式</span>
+          <span class="mode-desc">题目与答案直接呈现，<br>结合解析逐题记忆背诵</span>
+          <span class="mode-tags"><i>答案直接显示</i><i>纯阅读背诵</i></span>
+        </button>
+        <button type="button" class="mode-card reveal d3" data-mode="quiz" aria-pressed="false">
+          <span class="mode-glyph alt" aria-hidden="true">答</span>
+          <span class="mode-name">答题模式</span>
+          <span class="mode-desc">点击「下一题」后立即判断对错，<br>逐题显示正确答案与解析</span>
+          <span class="mode-tags"><i>即时批改</i><i>已答锁定</i></span>
+        </button>
+      </div>
+
+      <div class="setup-card reveal d4">
+        <fieldset class="setup-block">
+          <legend>练习范围（可多选题库）</legend>
+          <div class="check-row" id="scope-row"><!-- 由解密后的题库部分动态生成 --></div>
+        </fieldset>
+
+        <fieldset class="setup-block">
+          <legend>题型（可多选）</legend>
+          <div class="check-row">
+            <label class="check-pill"><input type="checkbox" data-type="single" checked><span>单选题 <b id="cnt-single"></b></span></label>
+            <label class="check-pill"><input type="checkbox" data-type="multiple" checked><span>多选题 <b id="cnt-multiple"></b></span></label>
+            <label class="check-pill"><input type="checkbox" data-type="fill" checked><span>填空题 <b id="cnt-fill"></b></span></label>
+            <label class="check-pill"><input type="checkbox" data-type="code" checked><span>编程题 <b id="cnt-code"></b></span></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="setup-block">
+          <legend>题量与顺序</legend>
+          <div class="row-2col">
+            <label class="inline-label">练习题数
+              <select id="limit">
+                <option value="0" selected>全部</option>
+                <option value="20">20 题</option>
+                <option value="30">30 题</option>
+                <option value="50">50 题</option>
+                <option value="100">100 题</option>
+              </select>
+            </label>
+            <label class="inline-label check-inline">
+              <input type="checkbox" id="shuffle"><span>随机打乱题目顺序</span>
+            </label>
+            <label class="inline-label check-inline">
+              <input type="checkbox" id="opt-shuffle"><span>打乱选择题选项顺序</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="start-area">
+          <button type="button" id="btn-start" class="btn primary big">开始练习</button>
+          <p class="start-hint" id="start-hint"></p>
+          <div class="quick-row">
+            <button type="button" id="btn-wb-open" class="btn wb-open">📖 错题本（<b id="wb-total">0</b> 题）</button>
+            <button type="button" id="btn-pick-open" class="btn wb-open">✏️ 自选题练习（<b id="pick-total">0</b> 题已选）</button>
+            <button type="button" id="btn-notes-open" class="btn wb-open">📚 知识库</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="usage-card reveal d5">
+        <h2>使用说明</h2>
+        <ul>
+          <li><b>背题模式</b>：直接呈现题目与答案——正确选项高亮打勾、填空直接填入参考答案、编程题展示参考代码，并附解析，适合逐题记忆背诵；答题卡记录已浏览进度。</li>
+          <li><b>答题模式</b>：选中答案后点击「下一题」立即判分并显示解析；已判分的题目自动锁定，可点「上一题」回看。</li>
+          <li><b>判分规则</b>：多选题需与答案完全一致；填空题按参考答案自动比对（忽略大小写、空格与全/半角），个别表述可能存在多种正确写法，请以回显的参考答案自行核对。</li>
+          <li><b>选项打乱</b>：勾选后，每次练习的选择题选项会随机重排并按新位置重新编号 A/B/C/D，正确答案同步对应新编号；同一练习内回看顺序保持不变。</li>
+          <li><b>编程题（自评）</b>：扩展题库含 30 道编程题，无法自动判分——先自行编码，答题模式点「下一题（查看答案）」对照参考答案自评，交卷统计不计入正确率。</li>
+          <li><b>错题本</b>：答错的题自动入本并累计次数；题目页与复盘页都可手动「＋ 错题本」。在错题本里勾选想练的题即可单独练习，也可移除或清空。</li>
+          <li><b>多题库同练</b>：练习范围可同时勾选多个题库（如第一部分 + 扩展题库）混合出题。</li>
+          <li>本页面为纯静态页面，双击 <code>index.html</code> 即可离线使用，无需服务器；手机浏览器打开同样可用。</li>
+        </ul>
+      </div>
+
+    </section>
+
+    <!-- ================= 答题页 ================= -->
+    <section id="view-quiz" hidden>
+
+      <div class="quiz-top">
+        <div class="qt-left">
+          <button type="button" class="btn ghost sm" id="btn-exit">退出</button>
+          <button type="button" class="btn danger sm" id="btn-submit">交卷</button>
+        </div>
+        <div class="qt-mid">
+          <span id="q-pos">第 1 / 1 题</span>
+          <div class="bar" aria-hidden="true"><i id="q-bar"></i></div>
+        </div>
+        <div class="qt-right">
+          <span class="timer" id="q-timer">00:00</span>
+          <span class="badge-mode" id="q-mode">背题模式</span>
+        </div>
+      </div>
+
+      <details class="palette-box" id="palette-box">
+        <summary>答题卡 · 进度导航</summary>
+        <div class="palette" id="palette" role="navigation" aria-label="题目导航"></div>
+        <p class="palette-legend"><i class="lg-cur"></i>当前 <i class="lg-done"></i>已答 <i class="lg-todo"></i>未答</p>
+      </details>
+
+      <article class="sheet q-sheet">
+        <header class="q-head">
+          <span class="q-type" id="q-type">单选题</span>
+          <span class="q-src" id="q-src"></span>
+          <span class="q-score" id="q-score"></span>
+          <button type="button" class="btn ghost sm wb-toggle" id="btn-bookmark" aria-label="加入或移出错题本">＋ 错题本</button>
+        </header>
+        <div class="q-stem" id="q-stem"></div>
+        <div class="q-body" id="q-body"></div>
+        <div class="q-verdict" id="q-verdict" hidden></div>
+      </article>
+
+      <div class="quiz-nav">
+        <button type="button" class="btn" id="btn-prev">← 上一题</button>
+        <span class="nav-hint" id="q-hint"></span>
+        <button type="button" class="btn primary" id="btn-next">下一题 →</button>
+      </div>
+
+    </section>
+
+    <!-- ================= 错题本页 ================= -->
+    <section id="view-wrongbook" hidden>
+
+      <div class="quiz-top">
+        <div class="qt-left">
+          <button type="button" class="btn ghost sm" id="btn-wb-back">← 返回</button>
+        </div>
+        <div class="qt-mid">
+          <span>错题本 · <b id="wb-count">0</b> 题</span>
+        </div>
+        <div class="qt-right">
+          <span class="badge-mode">答错自动入本</span>
+        </div>
+      </div>
+
+      <div class="setup-card" id="wb-panel">
+        <fieldset class="setup-block">
+          <legend>练习设置</legend>
+          <div class="row-2col">
+            <label class="inline-label">练习模式
+              <select id="wb-mode">
+                <option value="quiz" selected>答题模式（即时判分）</option>
+                <option value="recite">背题模式（直接显示答案）</option>
+              </select>
+            </label>
+            <label class="inline-label check-inline">
+              <input type="checkbox" id="wb-shuffle"><span>打乱顺序</span>
+            </label>
+          </div>
+        </fieldset>
+        <div class="start-area wb-actions">
+          <button type="button" id="btn-wb-start" class="btn primary big">开始练习（0 题选中）</button>
+          <button type="button" id="btn-wb-remove-sel" class="btn danger">删除所选</button>
+          <button type="button" id="btn-wb-clear" class="btn ghost">清空错题本</button>
+        </div>
+      </div>
+
+      <div id="wb-list" class="wb-list"></div>
+      <p class="review-empty" id="wb-empty" hidden>错题本是空的。答错题目或手动添加后会出现在这里。</p>
+
+    </section>
+
+    <!-- ================= 自选题练习页 ================= -->
+    <section id="view-pick" hidden>
+
+      <div class="quiz-top">
+        <div class="qt-left">
+          <button type="button" class="btn ghost sm" id="btn-pick-back">← 返回</button>
+        </div>
+        <div class="qt-mid">
+          <span>自选题练习 · 已选 <b id="pick-sel-count">0</b> 题</span>
+        </div>
+        <div class="qt-right">
+          <span class="badge-mode">想练哪题勾哪题</span>
+        </div>
+      </div>
+
+      <div class="setup-card">
+        <fieldset class="setup-block">
+          <legend>筛选题目</legend>
+          <div class="check-row" id="pick-scope-row"></div>
+          <div class="check-row" id="pick-type-row" style="margin-top:10px;"></div>
+          <input type="search" id="pick-search" class="pick-search" placeholder="搜索题干关键词，如：变量 / 数组 / session…" aria-label="搜索题干关键词">
+        </fieldset>
+        <fieldset class="setup-block">
+          <legend>练习设置</legend>
+          <div class="row-2col">
+            <label class="inline-label">练习模式
+              <select id="pick-mode">
+                <option value="quiz" selected>答题模式（即时判分）</option>
+                <option value="recite">背题模式（直接显示答案）</option>
+              </select>
+            </label>
+            <label class="inline-label check-inline">
+              <input type="checkbox" id="pick-shuffle"><span>打乱顺序</span>
+            </label>
+          </div>
+        </fieldset>
+        <div class="start-area wb-actions">
+          <button type="button" id="btn-pick-start" class="btn primary big">开始练习（0 题已选）</button>
+          <button type="button" id="btn-pick-sel-filtered" class="btn">全选当前筛选</button>
+          <button type="button" id="btn-pick-desel-filtered" class="btn ghost">取消当前筛选</button>
+          <button type="button" id="btn-pick-clear" class="btn danger">清空全部已选</button>
+        </div>
+      </div>
+
+      <p class="pick-count-tip" id="pick-count-tip"></p>
+      <div id="pick-list" class="wb-list"></div>
+      <div class="start-area"><button type="button" id="btn-pick-more" class="btn" hidden>加载更多</button></div>
+      <p class="review-empty" id="pick-empty" hidden>没有符合条件的题目，换个筛选条件或关键词试试。</p>
+
+    </section>
+
+    <!-- ================= 知识库页 ================= -->
+    <section id="view-notes" hidden>
+
+      <div class="quiz-top">
+        <div class="qt-left">
+          <button type="button" class="btn ghost sm" id="btn-notes-back">← 返回</button>
+          <button type="button" class="btn ghost sm" id="btn-notes-dir" hidden>📑 目录</button>
+        </div>
+        <div class="qt-mid">
+          <span>知识库 · <span id="notes-sub">选择章节</span></span>
+        </div>
+        <div class="qt-right">
+          <span class="badge-mode">按章节分类</span>
+        </div>
+      </div>
+
+      <!-- 目录视图 -->
+      <div id="notes-home">
+        <div class="setup-card">
+          <input type="search" id="notes-search" class="pick-search" style="margin-top:0;" placeholder="搜索章节标题或正文关键词…" aria-label="搜索知识库">
+        </div>
+        <div id="notes-dir" class="notes-dir"></div>
+        <div class="sheet notes-intro-card" id="notes-intro">
+          <h3>📖 怎么用这份笔记</h3>
+          <div id="notes-usage"></div>
+        </div>
+      </div>
+
+      <!-- 章节视图 -->
+      <div id="notes-viewer" hidden>
+        <article class="sheet notes-chapter">
+          <h2 class="nc-title" id="nc-title"></h2>
+          <div id="nc-body"></div>
+          <div class="nc-landing" id="nc-landing"></div>
+          <div class="nc-pitfalls" id="nc-pitfalls"></div>
+        </article>
+        <div class="nc-nav">
+          <button type="button" class="btn" id="btn-nc-prev">← 上一章</button>
+          <button type="button" class="btn primary" id="btn-nc-next">下一章 →</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= 成绩页 ================= -->
+    <section id="view-result" hidden>
+
+      <div class="result-hero sheet">
+        <div class="rh-main">
+          <p class="rh-label">批改完成 · 正确率</p>
+          <div class="rh-rate" id="r-rate">0%</div>
+          <p class="rh-mode" id="r-mode">背题模式</p>
+        </div>
+        <div class="rh-stamp" id="r-word">优秀</div>
+        <dl class="rh-stats">
+          <div><dt>答对</dt><dd class="ok" id="r-correct">0</dd></div>
+          <div><dt>答错</dt><dd class="bad" id="r-wrong">0</dd></div>
+          <div><dt>未答</dt><dd id="r-unanswered">0</dd></div>
+          <div><dt>用时</dt><dd id="r-time">00:00</dd></div>
+        </dl>
+        <div class="rh-actions">
+          <button type="button" class="btn primary" id="btn-wrong">只练错题</button>
+          <button type="button" class="btn" id="btn-again">再来一遍</button>
+          <button type="button" class="btn ghost" id="btn-home">返回首页</button>
+        </div>
+      </div>
+
+      <div class="review-tabs" id="review-tabs">
+        <button type="button" class="rtab active" data-filter="all">全部 <b id="tab-all">0</b></button>
+        <button type="button" class="rtab" data-filter="wrong">答错 <b id="tab-wrong">0</b></button>
+        <button type="button" class="rtab" data-filter="unanswered">未答 <b id="tab-unanswered">0</b></button>
+      </div>
+
+      <div id="review-list" class="review-list"></div>
+      <p class="review-empty" id="review-empty" hidden>这个分类下没有题目。</p>
+
+    </section>
+
+  </main>
+
+  <footer class="site-foot">
+    <p>题库来源：《PHP作业题库.docx》《PHP作业题库答案与解析.docx》《PHP同源练习题_3套150题(1).docx》 · 判分以【答案】为准，解析仅供参考 · 个人使用</p>
+  </footer>
+
+  <script src="js/secure.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

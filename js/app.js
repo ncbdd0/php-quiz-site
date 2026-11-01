@@ -46,7 +46,8 @@
     pickScopes: null,               // 选题页筛选：题库部分 Set，null = 全部
     pickTypes: null,                // 选题页筛选：题型 Set，null = 全部
     pickQuery: '',                  // 选题页筛选：题干关键词
-    pickPage: 1                     // 选题页分页
+    pickPage: 1,                    // 选题页分页
+    notesTab: 'notes'               // 知识库 tab：notes=章节笔记 | hw=课后作业与实验
   };
   const PICK_PAGE_SIZE = 80;
 
@@ -251,7 +252,7 @@
       if (r) {
         $('#lock-pw').value = '';
         msg.textContent = '';
-        bootApp(r.quiz, r.notes);
+        bootApp(r.quiz, r.notes, r.homework);
         rememberKey(C.pbkdf2Sha256(pw, C.hexToBytes(window.SECURE_DATA.salt), window.SECURE_DATA.rounds, 32));
         enterApp();
       } else {
@@ -819,12 +820,40 @@
     if (!window.NOTES_DATA) return;
     if (!NOTES_MAP) buildNotesMap();
     S.notesFrom = S.view;               // 记录来源视图，返回时回到原处
+    showNotesHome();
+    switchView('notes');
+  }
+
+  /* 知识库首页（保留当前 tab：章节笔记 / 课后作业与实验） */
+  function showNotesHome() {
     $('#notes-home').hidden = false;
     $('#notes-viewer').hidden = true;
     $('#btn-notes-dir').hidden = true;
-    $('#notes-sub').textContent = '共 ' + window.NOTES_DATA.chapters.length + ' 章';
-    renderNotesDir();
-    switchView('notes');
+    refreshNotesTab();
+    renderNotesDirByTab();
+  }
+
+  function switchNotesTab(tab) {
+    S.notesTab = tab === 'hw' ? 'hw' : 'notes';
+    $('#notes-search').value = '';
+    refreshNotesTab();
+    renderNotesDirByTab();
+  }
+
+  function refreshNotesTab() {
+    const hw = S.notesTab === 'hw' && window.HOMEWORK_DATA;
+    $('#notes-tab-notes').classList.toggle('selected', !hw);
+    $('#notes-tab-hw').classList.toggle('selected', !!hw);
+    $('#notes-search').placeholder = hw ? '搜索作业/实验标题、题目或代码…' : '搜索章节标题或正文关键词…';
+    $('#notes-sub').textContent = hw
+      ? '课后作业与实验 · ' + window.HOMEWORK_DATA.items.length + ' 篇'
+      : '章节笔记 · 共 ' + window.NOTES_DATA.chapters.length + ' 章';
+    $('#notes-intro').hidden = !!hw;   // 作业 tab 下不显示笔记使用说明
+  }
+
+  function renderNotesDirByTab() {
+    if (S.notesTab === 'hw' && window.HOMEWORK_DATA) renderHwDir();
+    else renderNotesDir();
   }
 
   function openNotesChapter(cid) {
@@ -877,6 +906,128 @@
     if (!dir.children.length) {
       dir.innerHTML = '<p class="review-empty">没有匹配的章节或内容，换个关键词试试。</p>';
     }
+  }
+
+  /* ---------------- 课后作业与实验 ---------------- */
+
+  /* 统一代码块渲染：白天纸质主题 + 语言徽标 */
+  function buildCodeBlock(lang, codeText) {
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    const tag = document.createElement('span');
+    tag.className = 'code-lang';
+    tag.textContent = (lang || 'code').toUpperCase();
+    const c = document.createElement('div');
+    c.className = 'code';
+    String(codeText).split('\n').forEach(function (line) {
+      const l = document.createElement('div');
+      l.className = 'code-line';
+      l.textContent = line;
+      c.appendChild(l);
+    });
+    wrap.appendChild(tag);
+    wrap.appendChild(c);
+    return wrap;
+  }
+
+  function renderHwDir() {
+    const dir = $('#notes-dir');
+    dir.innerHTML = '';
+    const kw = ($('#notes-search').value || '').trim().toLowerCase();
+    window.HOMEWORK_DATA.items.forEach(function (it) {
+      let hit = !kw;
+      if (kw) {
+        if (it.title.toLowerCase().indexOf(kw) !== -1 || (it.problem || '').toLowerCase().indexOf(kw) !== -1) hit = true;
+        else hit = it.blocks.some(function (b) {
+          const s = b.t === 'list' ? b.x.join('') : (b.x || '');
+          return String(s).toLowerCase().indexOf(kw) !== -1;
+        });
+      }
+      if (!hit) return;
+
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'sheet note-card hw-card';
+      card.innerHTML =
+        '<span class="nc-kind ' + (it.kind === 'homework' ? 'k-hw' : 'k-lab') + '">' +
+          (it.kind === 'homework' ? '作业' : '实验') + '</span>' +
+        '<span class="nc-name">' + C.escapeHtml(it.title) + '</span>' +
+        '<span class="nc-count">' + it.codes + ' 段答案代码</span>' +
+        (it.problem ? '<span class="nc-sum">' + C.escapeHtml(it.problem.replace(/^题目[：:]/, '').slice(0, 72)) + '…</span>' : '');
+      card.addEventListener('click', function () { openHomeworkDoc(it.id); });
+      dir.appendChild(card);
+    });
+    if (!dir.children.length) {
+      dir.innerHTML = '<p class="review-empty">没有匹配的作业或实验，换个关键词试试。</p>';
+    }
+  }
+
+  function openHomeworkDoc(id) {
+    if (!window.HOMEWORK_DATA) return;
+    if (S.view !== 'notes') S.notesFrom = S.view;
+    renderHomeworkDoc(id);
+    $('#notes-home').hidden = true;
+    $('#notes-viewer').hidden = false;
+    $('#btn-notes-dir').hidden = false;
+    switchView('notes');
+  }
+
+  function renderHomeworkDoc(id) {
+    const items = window.HOMEWORK_DATA.items;
+    const idx = items.findIndex(function (it) { return it.id === id; });
+    const it = items[idx];
+    if (!it) return;
+    $('#notes-sub').textContent = it.title;
+    $('#nc-title').textContent = it.title;
+
+    const body = $('#nc-body');
+    body.innerHTML = '';
+    /* 题目卡（每篇必有：文档显式题目或按小节合成） */
+    if (it.problem) {
+      const pb = document.createElement('div');
+      pb.className = 'hw-problem';
+      pb.innerHTML = '<span class="nc-tag">题目</span>' + C.escapeHtml(it.problem.replace(/^题目[：:]/, ''));
+      body.appendChild(pb);
+    }
+    it.blocks.forEach(function (b) {
+      if (b.t === 'h2') {
+        const h = document.createElement('h3');
+        h.className = 'nb-h2';
+        h.textContent = b.x;
+        body.appendChild(h);
+      } else if (b.t === 'p') {
+        const p = document.createElement('p');
+        p.className = 'nb-p';
+        p.innerHTML = b.x;   // 解析端已转义并做受限 markdown 转换
+        body.appendChild(p);
+      } else if (b.t === 'list') {
+        const ul = document.createElement('ul');
+        ul.className = 'nb-list';
+        b.x.forEach(function (li) {
+          const el = document.createElement('li');
+          el.innerHTML = li;
+          ul.appendChild(el);
+        });
+        body.appendChild(ul);
+      } else if (b.t === 'code') {
+        body.appendChild(buildCodeBlock(b.lang, b.x));
+      }
+    });
+    $('#nc-landing').hidden = true;
+    $('#nc-pitfalls').hidden = true;
+
+    /* 上/下一篇（按解析顺序：作业1→2→3，实验一→…→六） */
+    const prev = items[idx - 1];
+    const next = items[idx + 1];
+    const bp = $('#btn-nc-prev');
+    const bn = $('#btn-nc-next');
+    bp.hidden = !prev;
+    bn.hidden = !next;
+    bp.textContent = prev ? '← ' + prev.title : '';
+    bn.textContent = next ? next.title + ' →' : '';
+    bp.onclick = prev ? function () { renderHomeworkDoc(prev.id); window.scrollTo(0, 0); } : null;
+    bn.onclick = next ? function () { renderHomeworkDoc(next.id); window.scrollTo(0, 0); } : null;
+    window.scrollTo(0, 0);
   }
 
   function renderNotesChapter(cid) {
@@ -972,11 +1123,15 @@
       /* 返回来源视图（答题页 / 成绩页 / 首页），会话不受影响 */
       switchView(S.notesFrom === 'notes' || !S.notesFrom ? 'home' : S.notesFrom);
     });
-    $('#btn-notes-dir').addEventListener('click', openNotes);
+    $('#btn-notes-dir').addEventListener('click', showNotesHome);
+    /* 两个 tab：章节笔记 / 课后作业与实验 */
+    $$('.notes-tab').forEach(function (btn) {
+      btn.addEventListener('click', function () { switchNotesTab(btn.dataset.tab); });
+    });
     let t = null;
     $('#notes-search').addEventListener('input', function () {
       clearTimeout(t);
-      t = setTimeout(renderNotesDir, 180);
+      t = setTimeout(renderNotesDirByTab, 180);
     });
     /* 使用说明 */
     const usage = $('#notes-usage');
@@ -1755,9 +1910,10 @@
 
   /* ---------------- 启动 ---------------- */
   /* 应用启动：数据解密成功后执行（此前所有 DOM 初始化都未进行） */
-  function bootApp(quiz, notes) {
+  function bootApp(quiz, notes, homework) {
     window.QUIZ_DATA = quiz;
     window.NOTES_DATA = notes;
+    if (homework) window.HOMEWORK_DATA = homework;
     D = quiz;
     S.scopes = new Set(allScopeIds());
     initHome();
@@ -1776,7 +1932,7 @@
     if (stored && window.SECURE_DATA) {
       const r = C.secureDecryptWithKey(stored, window.SECURE_DATA);
       if (r) {
-        bootApp(r.quiz, r.notes);
+        bootApp(r.quiz, r.notes, r.homework);
         enterApp();
         return;
       }

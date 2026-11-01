@@ -572,7 +572,7 @@
     return out;
   }
 
-  /* 主入口：enc = window.SECURE_DATA；密码正确返回 {quiz, notes}，错误返回 null */
+  /* 主入口：enc = window.SECURE_DATA；密码正确返回 {quiz, notes, homework}，错误返回 null */
   function secureDecrypt(enc, password) {
     if (!enc || !enc.data || !enc.notes) return null;
     const key = pbkdf2Sha256(password, hexToBytes(enc.salt), enc.rounds, 32);
@@ -584,7 +584,12 @@
       const d = JSON.parse(bytesToUtf8(aesCtr256(keyBytes, hexToBytes(enc.data.iv), b64ToBytes(enc.data.ct))));
       const n = JSON.parse(bytesToUtf8(aesCtr256(keyBytes, hexToBytes(enc.notes.iv), b64ToBytes(enc.notes.ct))));
       if (!d || !d.parts || !n || !n.chapters) return null;
-      return { quiz: d, notes: n };
+      let hw = null;
+      if (enc.homework) {
+        hw = JSON.parse(bytesToUtf8(aesCtr256(keyBytes, hexToBytes(enc.homework.iv), b64ToBytes(enc.homework.ct))));
+        if (!hw || !hw.items) hw = null;
+      }
+      return { quiz: d, notes: n, homework: hw };
     } catch (e) {
       return null;   // 密码错误 / 数据损坏 → 统一返回 null
     }

@@ -6,11 +6,12 @@
 访客拿到 js/secure.js 只是一段密文；密码正确的用户在浏览器里解密使用。
 
 流程：
-  1) 读取本地明文 js/data.js、js/notes.js（由 parse_questions.py / parse_notes.py 生成，
-     这两个明文文件已加入 .gitignore，不进入仓库）
+  1) 读取本地明文 js/data.js、js/notes.js、js/homework.js（由 parse_questions.py /
+     parse_notes.py / parse_homework.py 生成，明文文件均已 .gitignore，不进入仓库）
   2) 密钥 = PBKDF2-HMAC-SHA256(密码, salt, rounds, 32字节)
   3) 每份负载独立随机 IV，AES-256-CTR 加密 → base64
-  4) 输出 js/secure.js：window.SECURE_DATA = {v, salt, rounds, data:{iv,ct}, notes:{iv,ct}}
+  4) 输出 js/secure.js：window.SECURE_DATA = {v, salt, rounds,
+     data:{iv,ct}, notes:{iv,ct}, homework:{iv,ct}}
 
 用法：
   python3 tools/encrypt_data.py --password '你的密码'
@@ -80,16 +81,19 @@ def main():
     ap.add_argument('--password', required=True)
     ap.add_argument('--in-data', default=os.path.join(ROOT, 'js', 'data.js'))
     ap.add_argument('--in-notes', default=os.path.join(ROOT, 'js', 'notes.js'))
+    ap.add_argument('--in-homework', default=os.path.join(ROOT, 'js', 'homework.js'))
     ap.add_argument('--out', default=os.path.join(ROOT, 'js', 'secure.js'))
     ap.add_argument('--rounds', type=int, default=20000)
     args = ap.parse_args()
 
     data_json = extract_json_object(args.in_data, 'QUIZ_DATA')
     notes_json = extract_json_object(args.in_notes, 'NOTES_DATA')
+    hw_json = extract_json_object(args.in_homework, 'HOMEWORK_DATA')
 
     salt = secrets.token_hex(16)          # 16 字节盐
     iv_d = secrets.token_hex(16)          # 每份负载独立 16 字节 IV
     iv_n = secrets.token_hex(16)
+    iv_h = secrets.token_hex(16)
 
     key = hashlib.pbkdf2_hmac('sha256', args.password.encode('utf-8'),
                               bytes.fromhex(salt), args.rounds, dklen=32)
@@ -99,6 +103,8 @@ def main():
         aes256_ctr_encrypt(key_hex, iv_d, data_json.encode('utf-8'))).decode()
     ct_n = base64.b64encode(
         aes256_ctr_encrypt(key_hex, iv_n, notes_json.encode('utf-8'))).decode()
+    ct_h = base64.b64encode(
+        aes256_ctr_encrypt(key_hex, iv_h, hw_json.encode('utf-8'))).decode()
 
     enc = {
         'v': 1,
@@ -107,6 +113,7 @@ def main():
         'rounds': args.rounds,
         'data': {'iv': iv_d, 'ct': ct_d},
         'notes': {'iv': iv_n, 'ct': ct_n},
+        'homework': {'iv': iv_h, 'ct': ct_h},
     }
 
     banner = (
@@ -125,6 +132,7 @@ def main():
     print(f'  salt={salt}  rounds={args.rounds}')
     print(f'  data:  {len(data_json)/1024:.0f} KB 明文 -> {len(ct_d)/1024:.0f} KB 密文')
     print(f'  notes: {len(notes_json)/1024:.0f} KB 明文 -> {len(ct_n)/1024:.0f} KB 密文')
+    print(f'  homework: {len(hw_json)/1024:.0f} KB 明文 -> {len(ct_h)/1024:.0f} KB 密文')
 
 
 if __name__ == '__main__':

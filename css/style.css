@@ -429,7 +429,7 @@ body {
 .q-stem .tl { margin: .45em 0; white-space: pre-wrap; word-break: break-word; }
 
 /* 代码块：浅色"白天"模式，保证其中文字与输入内容清晰可读 */
-.q-stem .code, .v-analysis .code {
+.q-stem .code, .v-analysis .code, .notes-chapter .code {
   background: #f8f3e4;
   color: var(--ink);
   border: 1px solid var(--line);
@@ -949,6 +949,40 @@ input:disabled { opacity: 1; }
   color: var(--red-deep);
   text-decoration: underline dotted rgba(143, 43, 31, .45);
   text-underline-offset: 3px;
+}
+
+/* ---------------- 课后作业与实验 ---------------- */
+.notes-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.notes-tab {
+  flex: 1; padding: 10px 8px;
+  border: 1.5px solid var(--line); border-radius: 9px;
+  background: var(--paper); color: var(--ink-2);
+  font-family: var(--serif); font-weight: 700; font-size: 14px; letter-spacing: .06em;
+  cursor: pointer; transition: all .12s ease;
+}
+.notes-tab.selected {
+  background: var(--paper-deep); color: var(--ink);
+  border-color: var(--ink-3); font-weight: 700;
+}
+.nc-kind.k-hw { color: var(--red); border-color: var(--red); }
+.nc-kind.k-lab { color: #2c6e49; border-color: #2c6e49; }
+.hw-problem {
+  margin: 4px 0 16px; padding: 12px 14px;
+  background: var(--paper-deep);
+  border: 1.5px dashed var(--ink-3); border-radius: 8px;
+  font-size: 14.5px; line-height: 1.8;
+}
+.hw-card .nc-count { color: #2c6e49; }
+.nb-list { margin: .5em 0 .5em 1.4em; font-size: 15px; line-height: 1.85; }
+.nb-list li { margin: .25em 0; }
+.code-wrap { position: relative; margin: 12px 0; }
+.code-wrap .code { margin: 0; padding-top: 30px; }
+.code-lang {
+  position: absolute; top: 8px; right: 10px; z-index: 1;
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .12em; color: var(--ink-2);
+  border: 1px solid var(--line); border-radius: 5px;
+  background: var(--paper); padding: 1px 7px;
 }
 
 /* ---------------- 响应式 ---------------- */

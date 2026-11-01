@@ -302,6 +302,12 @@ let NOTES = null;
         vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', 'notes.js'), 'utf8'), sbN);
         const sameNotes = JSON.stringify(r.notes) === JSON.stringify(sbN.window.NOTES_DATA);
         ok(sameNotes, '解密结果与本地明文 notes.js 完全一致');
+        /* homework 回环 */
+        const sbH = { window: {} };
+        vm.createContext(sbH);
+        vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', 'homework.js'), 'utf8'), sbH);
+        const sameHw = JSON.stringify(r.homework) === JSON.stringify(sbH.window.HOMEWORK_DATA);
+        ok(sameHw, '解密结果与本地明文 homework.js 完全一致');
       }
       ok(C.secureDecrypt(enc, PW + 'x') === null, '错误密码解密失败（返回 null）');
       /* AES-256 FIPS-197 标准向量 */
@@ -350,6 +356,30 @@ console.log('== 知识库（notes.js）==');
     ok(N.intro.usage.length >= 2, '前言使用说明已导入');
     const codeBlocks = N.chapters.reduce((s, c) => s + c.blocks.filter(b => b.t === 'code').length, 0);
     ok(codeBlocks >= 45, '正文代码块已导入（' + codeBlocks + ' 个）');
+  }
+}
+
+console.log('== 课后作业与实验（homework.js）==');
+{
+  const hwSrc = fs.readFileSync(path.join(ROOT, 'js', 'homework.js'), 'utf8');
+  const sandboxH = { window: {} };
+  vm.createContext(sandboxH);
+  vm.runInContext(hwSrc, sandboxH);
+  const H = sandboxH.window.HOMEWORK_DATA;
+  ok(!!H && Array.isArray(H.items), 'homework.js 加载且含 items');
+  if (H) {
+    ok(H.items.length === 9, '共 9 篇（3 作业 + 6 实验，实际 ' + H.items.length + '）');
+    ok(H.items.filter(i => i.kind === 'homework').length === 3, '作业 3 篇');
+    ok(H.items.filter(i => i.kind === 'lab').length === 6, '实验 6 篇');
+    const noCode = H.items.filter(i => !(i.blocks || []).some(b => b.t === 'code'));
+    ok(noCode.length === 0, '每篇都包含答案代码块（' + H.items.map(i => i.codes).join('+') + ' = ' +
+      H.items.reduce((s, i) => s + i.codes, 0) + ' 个代码块）');
+    const noProblem = H.items.filter(i => !i.problem);
+    ok(noProblem.length === 0, '每篇都有题目卡（文档显式题目或按小节合成）');
+    const codeLangs = new Set(H.items.flatMap(i => i.blocks.filter(b => b.t === 'code').map(b => b.lang)));
+    ok(codeLangs.has('php') && codeLangs.has('sql'), '代码块语言标注齐全（php/sql）');
+    /* id 唯一（供 prev/next 与跳转） */
+    ok(new Set(H.items.map(i => i.id)).size === H.items.length, 'item id 唯一');
   }
 }
 

@@ -1,0 +1,10 @@
+.DS_Store
+tools/parsed_debug.json
+# 明文题库/知识库不进仓库（仓库只保留 secure.js 密文）
+js/data.js
+js/notes.js
+js/homework.js
+# 期末押题题目明文（本地生成/出题产物，不入库）
+tools/final_chapters.json
+tools/final_comprehensive.json
+tools/_final_raw/

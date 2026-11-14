@@ -290,6 +290,7 @@
     updateCounts();
     updateStartHint();
     updateWrongbookUI();
+    routeFromNotesQuery();   // 从新标签页的 ?notes=… 直达知识库条目
   }
 
   function selectMode(mode, silent) {
@@ -848,6 +849,47 @@
     switchView('notes');
   }
 
+  /* 知识库条目：在新标签页打开（不打断当前页面）。
+     链接形如 ?notes=ch:c5 / ?notes=hw:hw2，新页自动解锁后直达该章/该篇。 */
+  function notesUrl(kind, id) {
+    const u = new URL(location.href);
+    u.search = '?notes=' + encodeURIComponent(kind + ':' + id);
+    u.hash = '';
+    return u.href;
+  }
+
+  function openNotesInNewTab(kind, id) {
+    const w = window.open(notesUrl(kind, id), '_blank');
+    if (w) { try { w.opener = null; } catch (e) { /* 忽略 */ } return; }
+    /* 弹窗被拦截时退回当前页打开，功能不丢 */
+    openInPage(kind, id);
+  }
+
+  function openInPage(kind, id) {
+    if (kind === 'ch') { openNotesChapter(id); return; }
+    S.notesTab = 'hw';
+    openNotes();
+    openHomeworkDoc(id);
+  }
+
+  /* 启动后按 URL 参数直达知识库条目（新标签页打开时使用） */
+  function routeFromNotesQuery() {
+    const m = /[?&]notes=([^&]+)/.exec(location.search);
+    if (!m || !window.NOTES_DATA) return false;
+    const parts = decodeURIComponent(m[1]).split(':');
+    const kind = parts[0];
+    const id = parts[1];
+    if (kind === 'ch' && window.NOTES_DATA.chapters.some(function (c) { return c.id === id; })) {
+      openNotesChapter(id);
+      return true;
+    }
+    if (kind === 'hw' && window.HOMEWORK_DATA && window.HOMEWORK_DATA.items.some(function (i) { return i.id === id; })) {
+      openInPage('hw', id);
+      return true;
+    }
+    return false;
+  }
+
   /* 知识库首页（保留当前 tab：章节笔记 / 课后作业与实验） */
   function showNotesHome() {
     $('#notes-home').hidden = false;
@@ -924,7 +966,8 @@
         '<span class="nc-name">' + C.escapeHtml(ch.title) + '</span>' +
         (n ? '<span class="nc-count">' + n + ' 题关联</span>' : '<span class="nc-count dim">阅读篇</span>') +
         (summary ? '<span class="nc-sum">' + C.escapeHtml(summary.slice(0, 68)) + '…</span>' : '');
-      card.addEventListener('click', function () { openNotesChapter(ch.id); });
+      card.title = '在新标签页打开（保留当前页面）';
+      card.addEventListener('click', function () { openNotesInNewTab('ch', ch.id); });
       dir.appendChild(card);
     });
     if (!dir.children.length) {
@@ -978,7 +1021,8 @@
         '<span class="nc-name">' + C.escapeHtml(it.title) + '</span>' +
         '<span class="nc-count">' + it.codes + ' 段答案代码</span>' +
         (it.problem ? '<span class="nc-sum">' + C.escapeHtml(it.problem.replace(/^题目[：:]/, '').slice(0, 72)) + '…</span>' : '');
-      card.addEventListener('click', function () { openHomeworkDoc(it.id); });
+      card.title = '在新标签页打开（保留当前页面）';
+      card.addEventListener('click', function () { openNotesInNewTab('hw', it.id); });
       dir.appendChild(card);
     });
     if (!dir.children.length) {

@@ -475,6 +475,11 @@ console.log('== 门禁与加密基建 ==');
   const cssSrc = fs.readFileSync(path.join(ROOT, 'css', 'style.css'), 'utf8');
   ok(cssSrc.indexOf('.mask-card') !== -1 && cssSrc.indexOf('.mask-again') !== -1,
     'CSS 含遮挡卡与再测按钮样式');
+  /* 知识库条目在新标签页打开 */
+  ok(appSrc.indexOf('openNotesInNewTab') !== -1 && appSrc.indexOf('window.open(notesUrl') !== -1,
+    '知识库卡片通过新标签页打开（window.open + ?notes= 路由）');
+  ok(appSrc.indexOf('routeFromNotesQuery') !== -1 && appSrc.indexOf("?notes=") !== -1,
+    '新标签页按 URL 参数直达知识库条目');
   /* 本地仓库工作区必须保留明文（供重新加密），但 git 不跟踪 */
   const gitignore = fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8');
   ok(/js\/data\.js/.test(gitignore) && /js\/notes\.js/.test(gitignore), '.gitignore 排除明文数据');

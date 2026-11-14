@@ -1,0 +1,17 @@
+{
+  "name": "PHP程序设计 · 学生自主答题",
+  "short_name": "PHP答题",
+  "description": "PHP 期末复习：题库 / 背题 / 错题本 / 知识库 / 期末押题（离线可用）",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f1e3",
+  "theme_color": "#8f2b1f",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

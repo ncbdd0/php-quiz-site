@@ -8,3 +8,5 @@ js/homework.js
 tools/final_chapters.json
 tools/final_comprehensive.json
 tools/_final_raw/
+# 单文件离线版（本地生成，含密文，自行发送使用）
+phpquiz离线版.html

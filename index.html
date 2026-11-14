@@ -3,9 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#f5efe2">
+  <meta name="theme-color" content="#8f2b1f">
   <title>PHP程序设计 · 学生自主答题</title>
   <meta name="description" content="PHP 程序设计作业题库自主练习：背题背诵 / 答题模式 / 错题本 / 知识库">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PHP答题">
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
 </head>
@@ -346,10 +352,31 @@
 
   <footer class="site-foot">
     <p>题库来源：《PHP作业题库.docx》《PHP作业题库答案与解析.docx》《PHP同源练习题_3套150题(1).docx》 · 判分以【答案】为准，解析仅供参考 · 个人使用</p>
+    <p><button type="button" class="btn ghost sm" id="btn-offline-save">⤓ 保存到本机（离线可用）</button></p>
   </footer>
 
   <script src="js/secure.js"></script>
   <script src="js/core.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    /* 离线支持（可选、按需启用）：点击按钮后注册 Service Worker 预缓存全站，
+       之后断网也能打开。不点击则不做任何缓存——不会给普通访问者留存离线副本。 */
+    (function () {
+      var btn = document.getElementById('btn-offline-save');
+      if (!btn) return;
+      var proto = location.protocol;
+      var okHost = proto === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      if (!okHost) { btn.hidden = true; return; }   // file:// 打开时本文件已是离线版
+      if (!('serviceWorker' in navigator)) { btn.hidden = true; return; }
+      btn.addEventListener('click', function () {
+        navigator.serviceWorker.register('sw.js').then(function () {
+          btn.textContent = '✓ 已保存，断网也能打开（建议加入主屏幕）';
+          btn.disabled = true;
+        }).catch(function () {
+          btn.textContent = '保存失败，请在本页联网时重试';
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

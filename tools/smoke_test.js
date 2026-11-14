@@ -480,6 +480,33 @@ console.log('== 门禁与加密基建 ==');
     '知识库卡片通过新标签页打开（window.open + ?notes= 路由）');
   ok(appSrc.indexOf('routeFromNotesQuery') !== -1 && appSrc.indexOf("?notes=") !== -1,
     '新标签页按 URL 参数直达知识库条目');
+  /* PWA 离线支持 */
+  const swSrc = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  ok(htmlSrc.indexOf('rel="manifest"') !== -1 && fs.existsSync(path.join(ROOT, 'manifest.json')),
+    'PWA：manifest.json 存在且已引用');
+  ok(htmlSrc.indexOf('btn-offline-save') !== -1 && htmlSrc.indexOf("serviceWorker.register('sw.js')") !== -1,
+    'PWA：离线保存为按钮启用（不自动给访问者缓存）');
+  ok(htmlSrc.indexOf("addEventListener('load'") === -1 ||
+     htmlSrc.indexOf("addEventListener('load'") > htmlSrc.indexOf('btn-offline-save'),
+    'PWA：无自动注册（仅按钮触发）');
+  ['index.html', 'css/style.css', 'js/core.js', 'js/app.js', 'js/secure.js', 'manifest.json',
+   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png']
+    .forEach(f => ok(swSrc.includes("'" + f + "'") && fs.existsSync(path.join(ROOT, f)),
+      'PWA 预缓存清单含 ' + f + '（且文件存在）'));
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+  ok(manifest.start_url === './index.html' && manifest.display === 'standalone' && manifest.icons.length >= 3,
+    'manifest：start_url/standalone/图标 齐全');
+  /* 单文件离线版（本地产物，不入仓库） */
+  const offPath = path.join(ROOT, '..', 'phpquiz离线版.html');
+  if (fs.existsSync(offPath)) {
+    const off = fs.readFileSync(offPath, 'utf8');
+    ok(off.indexOf('window.SECURE_DATA') !== -1, '离线单文件：含密文数据');
+    ok(!/(?:src|href)="(?!data:)[^"]*\.(?:css|js)"/.test(off), '离线单文件：无外部 css/js 引用（完全自包含）');
+    const secureLen = fs.readFileSync(path.join(ROOT, 'js', 'secure.js'), 'utf8').length;
+    ok(off.length > secureLen, '离线单文件：体积覆盖全部内联资源');
+  } else {
+    ok(false, '离线单文件未生成（运行 python3 tools/build_offline.py）');
+  }
   /* 本地仓库工作区必须保留明文（供重新加密），但 git 不跟踪 */
   const gitignore = fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8');
   ok(/js\/data\.js/.test(gitignore) && /js\/notes\.js/.test(gitignore), '.gitignore 排除明文数据');
